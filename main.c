@@ -64,8 +64,11 @@ int main(void) {
       break;
     if (strcmp(cmdline, "") == 0)
       continue;
-    if (strcmp(cmdline, "exit") == 0)
+    if (strcmp(cmdline, "exit") == 0) {
+      printf("\n");
       break;
+    }
+      
   
     // clear out args
     for (int i = 0; i < MAX_LINE/2 + 1; ++i)
@@ -74,35 +77,57 @@ int main(void) {
     // for testing only
     //for (int i = 0; i < num_of_tokens; ++i)
     //    printf("%d. %s\n", i, args[i]);
-    
-    
-    // args[i] is a command separed by;
-    //pid_t pid[num_of_tokens];
-    for (int i = 0; i < num_of_tokens; i++) {
+    if (num_of_tokens == 1) {
       pid_t pid = fork();
-      //pid[i] = fork();
       if (pid < 0) {
-        perror("fork() failed\n");
-      } else if (pid == 0) {
-        // process each command args[i]
-        //printf("executing: %s ", args[i]);
-        char *sub_args[MAX_LINE/2 + 1];
-        for (int j = 0; j < MAX_LINE/2 + 1; j++)
-          sub_args[j] = NULL;
-        int sub_num_of_tokens = tokenize(args[i], sub_args, " &");
-        pid_t sub_pid[sub_num_of_tokens];
-        for (int k = 0; k < sub_num_of_tokens; k++) {
-          //runCommand(sub_args, false);
-          runCommand(sub_args, false);
-        }
-        
+        perror("fork() failed");
+        exit(EXIT_FAILURE);
+      }
+      if (pid == 0) {
+        execvp(args[0], args);
+        printf("\n");
+        exit(EXIT_SUCCESS);
       } else {
-        // parent wait until child finish
-        //runCommand(args[i], true);
-        //int status;
-        //wait(&status);
+        wait(NULL);
+      }
+    } else if (num_of_tokens > 0) {
+//      // args holds commands separated by ;
+//      for (int i = 0; i < num_of_tokens; i++) {
+//        char *sub_args[MAX_LINE/2 + 1];
+//        for (int j = 0; j < MAX_LINE/2 + 1; j++)
+//          sub_args[j] = NULL;
+//        int sub_num_of_tokens = tokenize(args[i], sub_args, "&");
+//        int pid = fork();
+//        int status_child;
+//        pid_t sub_pid[sub_num_of_tokens];
+//        if (pid == 0) {
+//          for (int j = 0; j < sub_num_of_tokens; j++) {
+//            sub_pid[j] = fork();
+//
+//          }
+//
+//        } else {
+//          int status;
+//          wait(NULL);
+//        }
+      
+//        for (int i=0;i<sub_num_of_tokens; i++) {
+//          printf("%s\n", sub_args[i]);
+//        }
+//        printf("------\n");
+        for (int i=0;i<num_of_tokens; i++) {
+          int pid = fork();
+          if (pid < 0) {
+            perror("fork() failed in child");
+            exit(EXIT_FAILURE);
+          }
+          
+        }
+    
       }
     }
+    
+    
     
     
     
