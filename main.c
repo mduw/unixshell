@@ -97,11 +97,7 @@ void executeSubCmd(char *groupcmd) {
           // ls -all become [0]: ls, [1]: -all
           //printf("%s\n",temp[0]);
           int lll= tokenize(temp[0], singlecmd, " ");
-          //printf("%s\n", temp[1]);
-          //printf("%d\n", lll);
-//          printf("singlecmd: ");
-//          for (int k=0;k<lll;k++)
-//            printf("%s\n", singlecmd[k]);
+          
           int pipefd[2];
           pipe(pipefd);
           pids[i] = fork();
@@ -123,8 +119,6 @@ void executeSubCmd(char *groupcmd) {
             tokenize(temp[1], filename, " ");
             FILE *file;
             file = fopen(filename[0], "w");
-            
-            
            
             // this is for testing
             for (int q=0; q < y;q++) {
@@ -136,7 +130,24 @@ void executeSubCmd(char *groupcmd) {
           }
           
         } else if (strcmp(criteria, "<") == 0) {
-          
+//          for (int q=0;q<l;q++)
+//            printf("%s",temp[q]);
+          char *tempstr[10];
+          tokenize(temp[1], tempstr, " ");
+          temp[1] = tempstr[0];
+          //printf("%s\n",temp[1]);
+          temp[3] = NULL;
+          pids[i] = fork();
+          if (pids[i] < 0) {
+            perror("fork() failed\n");
+            exit(EXIT_FAILURE);
+          } else if (pids[i] == 0) {
+            execlp("/bin/cat", "cat", temp[1], NULL);
+            exit(EXIT_SUCCESS);
+          } else {
+            int cstatus;
+            wait(&cstatus);
+          }
         } else if (ch == "|") {
           
         }
@@ -180,16 +191,20 @@ void executeSubCmd(char *groupcmd) {
 int main(void) {
   char *args[MAX_LINE/2 + 1];
   int shouldRun = 1;
- 
+  char *LastCmd = (char *) malloc(MAX_LINE * sizeof(char));
+  char *cmdline = (char *) malloc(MAX_LINE * sizeof(char));
   while (shouldRun) {
     
     printf("osh>");
     fflush(stdout);
     
     // read cmd from console
-    char *cmdline = (char *) malloc(MAX_LINE * sizeof(char));
-    int len = readline(&cmdline);
     
+    int len = readline(&cmdline);
+    if (strcmp(cmdline, "!!") != 0) {
+      //free(LastCmd);
+      strcpy(LastCmd, cmdline);
+    }
     // validate command
     if (len <= 0)
       break;
@@ -198,6 +213,11 @@ int main(void) {
     if (strcmp(cmdline, "exit") == 0) {
       printf("\n");
       break;
+    }
+    if (strcmp(cmdline, "!!") == 0) {
+      strcpy(cmdline, LastCmd);
+      //cmdline = LastCmd;
+      printf("%s\n", cmdline);
     }
     // separate commands by ;
     for (int i = 0; i < MAX_LINE/2 + 1; ++i)
@@ -209,9 +229,11 @@ int main(void) {
     for (int i = 0; i < num_of_tokens; i++)
       executeSubCmd(args[i]);
     // free memory
-    free(cmdline);
+    
   }
   
   printf("Exiting shell\n");
+  free(cmdline);
+  free(LastCmd);
   return 0;
 }
