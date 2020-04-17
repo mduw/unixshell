@@ -44,8 +44,6 @@ void runCommand(char *args[], bool waitForIt) {
     printf("Parent waiting on %d\n", child_pid);
     int status;
     int completed_pid = wait(&status);
-    //wait(NULL);
-    //printf("Completed %d with return value %d\n", completed_pid, status);
   }
 }
 int PipeOrRedirection(char *str) {
@@ -68,7 +66,9 @@ void executeSubCmd(char *groupcmd) {
       args[i] = NULL;
     int nums_of_tokens = tokenize(groupcmd, args, "&");
     int pids[nums_of_tokens];
+    // execute each command separated by & in parallel
     for (int i = 0; i < nums_of_tokens; i++) {
+      // check if there is > < or |
       int pos = PipeOrRedirection(args[i]);
       if (pos != -1) {
         char *temp[MAX_LINE/2 + 1];
@@ -85,10 +85,7 @@ void executeSubCmd(char *groupcmd) {
           criteria = "|";
         //printf("%c\n", ch);
         int l = tokenize(args[i], temp, criteria);
-//        for (int q=0;q < l; q++)
-//          printf("%s\n", temp[q]);
-//        printf("%d", l);
-//        printf("%c", ch);
+        // special execution for >
         if (strcmp(criteria, ">") == 0) {
           
           char *singlecmd[MAX_LINE/2 + 1];
@@ -128,7 +125,7 @@ void executeSubCmd(char *groupcmd) {
             fclose(file);
             wait(&status);
           }
-          
+          // special execution for >
         } else if (strcmp(criteria, "<") == 0) {
 //          for (int q=0;q<l;q++)
 //            printf("%s",temp[q]);
@@ -148,19 +145,60 @@ void executeSubCmd(char *groupcmd) {
             int cstatus;
             wait(&cstatus);
           }
-        } else if (ch == "|") {
+          // special execution for >
+        } else if (strcmp(criteria, "|") == 0) {
+          char *singlecmd[MAX_LINE/2 + 1];
+          for (int j = 0; j < MAX_LINE/2 + 1; ++j)
+            singlecmd[j] = NULL;
+          // ls -all become [0]: ls, [1]: -all
+          //printf("%s\n",temp[0]);
+          int lll= tokenize(temp[0], singlecmd, " ");
+          
+          int pipefd[2];
+          pipe(pipefd);
+          pids[i] = fork();
+          if (pids[i] < 0) {
+            perror("fork() failed\n");
+            //exit(EXIT_FAILURE);
+          } else if (pids[i] == 0) {
+            close(pipefd[0]);
+            dup2(pipefd[1], 1);
+            close(pipefd[1]);
+            execvp(singlecmd[0], singlecmd);
+            exit(EXIT_SUCCESS);
+          } else {
+            char buf[BUF_SIZE];
+            close(pipefd[1]);
+            int y=read(pipefd[0], buf, BUF_SIZE);
+            // remove extra space in filename
+            
+//            for (int q=0; q < y;q++) {
+//              printf("%c", buf[q]);
+//            }
+            FILE *file;
+            file = fopen("out.txt", "w");
+            // this is for testing
+            for (int q=0; q < y;q++) {
+              //printf("%c", buf[q]);
+              fputc(buf[q], file);
+            }
+            fclose(file);
+            char *tempstr[10];
+            tokenize(temp[1], tempstr, " ");
+            temp[1] = tempstr[0];
+            int cpid = fork();
+            if (cpid < 0) {
+              perror("fork() failed\n");
+              exit(EXIT_FAILURE);
+            } else if (cpid == 0) {
+              execlp(temp[1], "output.txt", NULL);
+              exit(EXIT_SUCCESS);
+            }
+            
+            wait(&status);
+          }
           
         }
-//        pids[i] = fork();
-//        if (pids[i] < 0) {
-//          perror("fork() failed\n");
-//        } else if (pids[i] == 0) {
-//          execvp(singlecmd[0], singlecmd);
-//          exit(EXIT_SUCCESS);
-//        } else {
-//          wait(&status);
-//        }
-//        //continue;
       } else {
         // process each single command in parallel
         char *singlecmd[MAX_LINE/2 + 1];
@@ -228,12 +266,10 @@ int main(void) {
     //    printf("%d. %s\n", i, args[i]);
     for (int i = 0; i < num_of_tokens; i++)
       executeSubCmd(args[i]);
-    // free memory
-    
   }
   
   printf("Exiting shell\n");
-  free(cmdline);
-  free(LastCmd);
+  free(cmdline); // free memory
+  free(LastCmd); // free memory
   return 0;
 }
