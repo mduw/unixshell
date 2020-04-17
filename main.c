@@ -121,7 +121,6 @@ void executeSubCmd(char *groupcmd) {
             // remove extra space in filename
             char *filename[2];
             tokenize(temp[1], filename, " ");
-            printf("%s\n", filename[0]);
             FILE *file;
             file = fopen(filename[0], "w");
             
